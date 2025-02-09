@@ -1,0 +1,20 @@
+FROM python:3.12.3-slim
+
+WORKDIR /app
+
+# 開発用の依存関係をインストール
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# ホットリロード用の設定
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+# コードのマウントポイントを作成
+VOLUME /app
+
+# 開発サーバーのポートを公開
+EXPOSE 8000
+
+# 開発サーバーを起動
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
