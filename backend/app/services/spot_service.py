@@ -31,7 +31,7 @@ class SpotService:
 
         # Geminiモデルの初期化
         self.model = ChatGoogleGenerativeAI(
-            model="gemini-1.5-flash-002",
+            model="gemini-2.0-flash",
             temperature=0
         )
 
@@ -221,6 +221,7 @@ pageSize=5
         for i, place in enumerate(state.enriched_places, 1):
             prompt_text += f"""
     スポット候補{i}件目：{place.place.name}
+    スポットのID：{place.place.place_id}
     レビューの点数（5点満点）：{place.place.rating}
     レビューの件数：{place.place.user_ratings_total}
     """
@@ -229,16 +230,34 @@ pageSize=5
                 prompt_text += f"レビュー{j}件目：{review.author_name}さん、評価は{review.rating}点、レビュー内容は次のとおり。{review.text}\n"
 
             for j, news in enumerate(place.news_articles, 1):
-                prompt_text += f"記事{j}件目：「{news.site_name}」というサイトが「{news.title}」というタイトルの記事。概要は「{news.description}」。\n"
+                prompt_text += f"記事{j}件目：「{news.site_name}」というサイトが「{news.title}」というタイトルの記事。概要は「{news.description}」。URLは「{news.url}」\n"
 
             prompt_text += "\n"
 
         prompt_text += f"""
-    最後に、ユーザからの要望を改めて伝えます。
-    「{state.user_request}」
-    これまでの情報をもとに、どのスポットがユーザの希望を満たすかどうかを踏まえた上で、総合的な評価コメントを書いてください。
-    得られた情報だけではユーザの希望を満たすかどうかわからないときは、素直にそう書いてください。
-    自信満々で回答できるときは、自信満々に回答してください。
+最後に、ユーザからの要望を改めて伝えます。
+「{state.user_request}」
+これまでの情報をもとに、どのスポットがユーザの希望を満たすかどうかを踏まえた上で、総合的な評価コメントを書いてください。
+
+まずはどのような観点を重視したかを簡単に、親しみやすく伝えてください。
+
+得られた情報だけではユーザの希望を満たすかどうかわからないときは、素直にそう書いてください。
+自信満々で回答できるときは、自信満々に回答してください。
+
+店名は重要なので、スポットを紹介するときはH1タグ「#」をつけてください。絶対にH1タグですよ！
+説明にはまず
+「マッチ度★★★★☆：老舗の風格と安定感！」
+などのように、5点満点の評価と短いキャッチコピーをつけてください。
+
+そのあとはスポットの良いところ、や気になるポイントを魅力たっぷりに説明してください！
+大事なところは太字で強調するのも忘れずに。
+記事に取り上げられていれば、それは大きな魅力です。雑誌系のサイトに取り上げられている際は文脈とともに紹介してください。
+口コミサイトも重要です。Yahooなども重要です。記事を引用する際は、[サイト名](url)のようにリンクも貼ってください。text部分はタイトルでなくて構いません。自然な説明になるように心がけてください。なお、記事のタイトルや内容が特定のお店を関係が薄いと思われるときは紹介しないように。
+
+最後に最終的なおすすめを伝えてください。これもH1タグ「#」をつけて見出しにしてください。
+スポットの名前を初めて出すときはプレイスの写真などを紹介したいと思うので、
+<place place_id=プレイスのID></place>タグを追記し、あとでアプリ側で表示する際に画像などの挿入場所がわかるようにしてください。
+また、スポットの紹介文の後に地図を表示したいので、<pmap place_id=プレイスのID></pmap>タグを追加してください。
     """
 
         return prompt_text
@@ -355,11 +374,12 @@ pageSize=5
                     "places": [place.dict() for place in search_results["places"]]
                 }
             }
+            # print(f"data: {json.dumps(initial_response, cls=DateTimeEncoder, ensure_ascii=False)}\n\n")
             yield f"data: {json.dumps(initial_response, cls=DateTimeEncoder, ensure_ascii=False)}\n\n"
 
             # Geminiの設定をストリーミングモードに
             streaming_model = ChatGoogleGenerativeAI(
-                model="gemini-1.5-flash-002",
+                model="gemini-2.0-flash",
                 temperature=0,
                 stream=True
             )
